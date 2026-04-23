@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>One Gentle Moment 🌿</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{min-height:100vh;background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);font-family:'Segoe UI',sans-serif;color:#fff;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+canvas#bg{position:fixed;top:0;left:0;z-index:0;pointer-events:none;}
+.wrapper{position:relative;z-index:10;width:100%;max-width:600px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:16px;}
+.datetime{text-align:center;}
+.date{font-size:0.9rem;opacity:0.7;letter-spacing:2px;text-transform:uppercase;}
+.time{font-size:2.8rem;font-weight:700;background:linear-gradient(90deg,#00ffd5,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;}
+.quote-card{background:rgba(255,255,255,0.08);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.15);border-radius:24px;padding:32px;text-align:center;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.4);transition:all 0.5s;}
+.quote-text{font-size:1.35rem;font-weight:600;line-height:1.6;margin-bottom:12px;transition:opacity 0.5s;}
+.quote-meaning{font-size:0.95rem;opacity:0.75;line-height:1.5;transition:opacity 0.5s;}
+.quote-nav{display:flex;gap:12px;margin-top:16px;justify-content:center;}
+.quote-nav button{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:8px 18px;border-radius:20px;cursor:pointer;transition:all 0.3s;font-size:0.85rem;}
+.quote-nav button:hover{background:#00ffd5;color:#000;}
+.music-card{background:rgba(255,255,255,0.06);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:20px;width:100%;display:flex;flex-direction:column;align-items:center;gap:12px;}
+.music-label{font-size:0.8rem;opacity:0.6;text-transform:uppercase;letter-spacing:2px;}
+.music-btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+.music-btns button{background:rgba(0,255,213,0.1);border:1px solid #00ffd5;color:#00ffd5;padding:8px 16px;border-radius:16px;cursor:pointer;transition:all 0.3s;font-size:0.85rem;}
+.music-btns button:hover,.music-btns button.active{background:#00ffd5;color:#0f2027;font-weight:700;}
+.progress-bar{width:100%;height:4px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,#00ffd5,#a78bfa);width:0%;transition:width 0.5s;}
+.hint{font-size:0.8rem;opacity:0.5;text-align:center;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:0.3;}50%{opacity:0.7;}}
+.streak{display:flex;align-items:center;gap:8px;font-size:0.8rem;opacity:0.6;}
+.streak span{background:rgba(167,139,250,0.2);border-radius:10px;padding:2px 10px;color:#a78bfa;}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="wrapper">
+  <div class="datetime">
+    <div class="date" id="dateEl"></div>
+    <div class="time" id="timeEl"></div>
+  </div>
+  <div class="quote-card">
+    <div class="quote-text" id="quoteText"></div>
+    <div class="quote-meaning" id="quoteMeaning"></div>
+    <div class="quote-nav">
+      <button onclick="prevQuote()">← Prev</button>
+      <button onclick="shuffle()">🔀 Shuffle</button>
+      <button onclick="nextQuote()">Next →</button>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+  <div class="music-card">
+    <div class="music-label">🎵 Ambient Soundscape</div>
+    <div class="music-btns">
+      <button onclick="playTone('rain')" id="btn-rain">🌧 Rain</button>
+      <button onclick="playTone('forest')" id="btn-forest">🌳 Forest</button>
+      <button onclick="playTone('ocean')" id="btn-ocean">🌊 Ocean</button>
+      <button onclick="playTone('calm')" id="btn-calm">🧘 528Hz</button>
+      <button onclick="stopTone()" id="btn-stop">⏹ Stop</button>
+    </div>
+  </div>
+  <div class="streak">Day <span id="dayCount">1</span> of your calm journey 🌱</div>
+  <div class="hint">Tap a sound above • Quotes refresh daily</div>
+</div>
+<script>
+// === PARTICLES ===
+const canvas=document.getElementById('bg'),ctx=canvas.getContext('2d');
+let W,H,particles=[];
+function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;}
+resize();window.addEventListener('resize',resize);
+class P{constructor(){this.reset();}reset(){this.x=Math.random()*W;this.y=Math.random()*H;this.r=Math.random()*2+0.5;this.sy=-(Math.random()*0.4+0.1);this.sx=(Math.random()-0.5)*0.2;this.a=Math.random()*0.6+0.1;this.hue=Math.random()>0.5?180:270;}update(){this.y+=this.sy;this.x+=this.sx;if(this.y<-10)this.reset();}draw(){ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fillStyle=`hsla(${this.hue},100%,70%,${this.a})`;ctx.shadowColor=`hsla(${this.hue},100%,70%,0.8)`;ctx.shadowBlur=8;ctx.fill();}}
+for(let i=0;i<120;i++)particles.push(new P());
+function animate(){ctx.clearRect(0,0,W,H);particles.forEach(p=>{p.update();p.draw();});requestAnimationFrame(animate);}animate();
+
+// === DATE/TIME ===
+function updateTime(){
+  const n=new Date();
+  document.getElementById('dateEl').textContent=n.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('timeEl').textContent=n.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+updateTime();setInterval(updateTime,1000);
+
+// === QUOTES ===
+const quotes=[
+  {text:"You don't have to solve your whole life today 🌷",meaning:"Just focus on getting through today. Tomorrow can wait."},
+  {text:"Rest is not a reward. It's a need 🌙",meaning:"You don't need to finish everything to deserve rest."},
+  {text:"Quiet moments matter more than loud victories 🍃",meaning:"Peaceful time is as important as big achievements."},
+  {text:"Moving slowly is still moving 🐢",meaning:"Even small progress counts."},
+  {text:"Nothing is wrong with pausing 🌼",meaning:"Stopping for a while is okay."},
+  {text:"It's okay to breathe before you continue 🌬️",meaning:"Take a break before starting again."},
+  {text:"You are allowed to take today gently 🤍",meaning:"You don't have to push yourself today."},
+  {text:"Small steps still change your direction 🌱",meaning:"Little efforts slowly improve things."},
+  {text:"You don't need to be strong every moment 🫂",meaning:"Feeling weak sometimes is normal."},
+  {text:"Peace is productive too ☁️",meaning:"Being calm also helps you grow."},
+];
+
+// 🎂 BIRTHDAY POEM (May 13)
+const birthdayPoem = {
+  text: "Today is not just a day... it's YOUR day 🎂✨\n\nYou came into this world and made it softer, brighter, kinder.\nEven on quiet days, your existence matters more than you think.\n\nKeep growing, keep smiling, keep being you 🌿💫",
+  meaning: "Happy Birthday 💖 — This world is better because you are in it."
+};
+
+// === DATE CHECK ===
+const today=new Date();
+const isBirthday = (today.getDate() === 13 && today.getMonth() === 4); // May = 4 (0-based)
+
+// === DAY COUNT ===
+const startDate=new Date('2025-01-01');
+const dayIndex=Math.floor((today-startDate)/(1000*60*60*24));
+document.getElementById('dayCount').textContent=dayIndex+1;
+
+let currentIdx=dayIndex%quotes.length;
+let autoInterval;
+
+// === SHOW QUOTE / BIRTHDAY ===
+function showQuote(idx){
+  const qt=document.getElementById('quoteText');
+  const qm=document.getElementById('quoteMeaning');
+
+  qt.style.opacity=0;
+  qm.style.opacity=0;
+
+  setTimeout(()=>{
+
+    if(isBirthday){
+      qt.textContent = birthdayPoem.text;
+      qm.textContent = birthdayPoem.meaning;
+
+      // FULL progress bar on birthday 🎉
+      document.getElementById('progressFill').style.width='100%';
+
+    } else {
+      currentIdx=(idx+quotes.length)%quotes.length;
+      qt.textContent=quotes[currentIdx].text;
+      qm.textContent=quotes[currentIdx].meaning;
+      document.getElementById('progressFill').style.width=((currentIdx+1)/quotes.length*100)+'%';
+    }
+
+    qt.style.opacity=1;
+    qm.style.opacity=1;
+
+  },300);
+}
+
+// Disable navigation on birthday
+function nextQuote(){ if(!isBirthday) showQuote(currentIdx+1); }
+function prevQuote(){ if(!isBirthday) showQuote(currentIdx-1); }
+function shuffle(){ if(!isBirthday) showQuote(Math.floor(Math.random()*quotes.length)); }
+
+// Initial load
+showQuote(currentIdx);
+
+// Auto-advance only if not birthday
+if(!isBirthday){
+  autoInterval=setInterval(nextQuote,15000);
+}
+
+// === AMBIENT SOUND ===
+let audioCtx=null,activeNodes=[],activeType=null;
+function getCtx(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx;}
+function stopTone(){activeNodes.forEach(n=>{try{n.stop();}catch(e){}});activeNodes=[];activeType=null;document.querySelectorAll('.music-btns button').forEach(b=>b.classList.remove('active'));}
+
+function playTone(type){
+  stopTone();
+  const ac=getCtx();
+  activeType=type;
+  document.getElementById('btn-'+type).classList.add('active');
+
+  if(type==='calm'){
+    const osc=ac.createOscillator();const gain=ac.createGain();
+    osc.frequency.value=528;osc.type='sine';gain.gain.value=0.05;
+    osc.connect(gain);gain.connect(ac.destination);osc.start();
+    activeNodes.push(osc);
+  }else if(type==='rain'){
+    createNoise(ac,0.06,'lowpass',800);
+  }else if(type==='ocean'){
+    createNoise(ac,0.07,'lowpass',400);
+  }else if(type==='forest'){
+    createNoise(ac,0.03,'bandpass',2000);
+  }
+}
+
+function createNoise(ac,vol,filterType,freq){
+  const bufSize=2*ac.sampleRate;
+  const buf=ac.createBuffer(1,bufSize,ac.sampleRate);
+  const data=buf.getChannelData(0);
+  for(let i=0;i<bufSize;i++)data[i]=Math.random()*2-1;
+
+  const src=ac.createBufferSource();src.buffer=buf;src.loop=true;
+  const filter=ac.createBiquadFilter();filter.type=filterType;filter.frequency.value=freq;
+  const gain=ac.createGain();gain.gain.value=vol;
+
+  src.connect(filter);filter.connect(gain);gain.connect(ac.destination);
+  src.start();
+  activeNodes.push(src);
+}
+</script>
+</body>
+</html>
